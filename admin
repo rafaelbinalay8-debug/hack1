@@ -1,0 +1,220 @@
+-- File: admin_bypass_final.lua
+-- Game: Egg Farm simulator (berdasarkan source)
+-- Executor: Synapse X / Script-Ware
+-- Method: IsAdmin spoof + OpenFrameEvent trigger + command sender
+-- Runtime: Roblox Luau
+
+local RS      = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LP      = Players.LocalPlayer
+
+-- =====================
+-- STEP 1: spoof IsAdmin
+-- source: AdminList = { "aduritewrath", IsAdmin = function }
+-- cek: table.find(list, player.Name:lower())
+-- fix: inject nama Sam ke array
+-- =====================
+local ok1, AdminList = pcall(function()
+    return require(RS:WaitForChild("Admin"):WaitForChild("AdminList"))
+end)
+
+if not ok1 then
+    warn("[BYPASS] AdminList require failed: " .. tostring(AdminList))
+else
+    -- inject username Sam ke array (lowercase, karena IsAdmin pakai :lower())
+    local username = "falzieeeee"
+    local already = table.find(AdminList, username)
+    if not already then
+        table.insert(AdminList, username)
+        print("[BYPASS] Injected '" .. username .. "' into AdminList")
+    else
+        print("[BYPASS] Already in AdminList at index " .. already)
+    end
+
+    -- spoof fungsinya juga buat jaga-jaga
+    AdminList.IsAdmin = function(player)
+        if player and player.Name then
+            return player.Name:lower() == LP.Name:lower()
+                or table.find(AdminList, player.Name:lower()) ~= nil
+        end
+        return false
+    end
+    print("[BYPASS] IsAdmin function spoofed")
+end
+
+-- =====================
+-- STEP 2: grab Remotes dan fire OpenFrameEvent
+-- source: v_u_5.OpenFrameEvent:Fire("AdminFrame")
+-- ini BindableEvent — Fire(), bukan FireServer()
+-- =====================
+local ok2, Remotes = pcall(function()
+    return require(RS:WaitForChild("Remotes"))
+end)
+
+if not ok2 then
+    warn("[BYPASS] Remotes require failed: " .. tostring(Remotes))
+else
+    print("[BYPASS] Remotes loaded")
+
+    task.wait(0.5)
+
+    -- fire OpenFrameEvent
+    local ok3, err3 = pcall(function()
+        Remotes.OpenFrameEvent:Fire("AdminFrame")
+    end)
+    if ok3 then
+        print("[BYPASS] OpenFrameEvent:Fire('AdminFrame') — success")
+    else
+        warn("[BYPASS] OpenFrameEvent failed: " .. tostring(err3))
+    end
+end
+
+-- =====================
+-- STEP 3: force AdminFrame visible (fallback)
+-- source: AdminFrame ada di PlayerGui.MainGui.AdminFrame
+-- =====================
+task.wait(0.5)
+local function ForceAdminFrame()
+    local pg = LP:FindFirstChild("PlayerGui")
+    if not pg then return warn("[BYPASS] No PlayerGui") end
+    local mg = pg:FindFirstChild("MainGui")
+    if not mg then return warn("[BYPASS] No MainGui") end
+    local af = mg:FindFirstChild("AdminFrame")
+    if not af then return warn("[BYPASS] No AdminFrame") end
+
+    af.Visible = true
+
+    -- unlock semua child
+    for _, obj in ipairs(af:GetDescendants()) do
+        if obj:IsA("GuiObject") then
+            obj.Visible = true
+        end
+        if obj:IsA("TextButton") then
+            obj.Active = true
+        end
+    end
+    print("[BYPASS] AdminFrame force-visible done")
+end
+ForceAdminFrame()
+
+-- =====================
+-- STEP 4: command sender
+-- source: command dikirim via TextBox + Enter button di AdminFrame
+-- kita wire langsung tanpa UI
+-- format: ketik command di TextBox → klik Enter
+-- =====================
+local function SendCommand(cmd)
+    local pg = LP:FindFirstChild("PlayerGui")
+    if not pg then return warn("[BYPASS] No PlayerGui") end
+    local mg = pg:FindFirstChild("MainGui")
+    if not mg then return warn("[BYPASS] No MainGui") end
+    local af = mg:FindFirstChild("AdminFrame")
+    if not af then return warn("[BYPASS] No AdminFrame") end
+
+    local cmdFrame = af:FindFirstChild("Command")
+    if not cmdFrame then return warn("[BYPASS] No Command frame") end
+    local textbox = cmdFrame:FindFirstChild("TextBox")
+    if not textbox then return warn("[BYPASS] No TextBox") end
+    local enterBtn = af:FindFirstChild("Enter")
+    if not enterBtn then return warn("[BYPASS] No Enter button") end
+
+    -- set command text
+    textbox.Text = cmd
+
+    -- fire Enter button
+    local ok, err = pcall(function()
+        enterBtn:FindFirstChildOfClass("ClickDetector") -- just in case
+        -- simulate click via Activated
+        enterBtn.Activated:Connect(function() end) -- ensure listener exists
+        -- fire MouseButton1Click
+        local vgui = game:GetService("VirtualInputManager")
+        if vgui then
+            vgui:SendMouseButtonEvent(
+                enterBtn.AbsolutePosition.X + enterBtn.AbsoluteSize.X/2,
+                enterBtn.AbsolutePosition.Y + enterBtn.AbsoluteSize.Y/2,
+                0, true, game, 0
+            )
+            task.wait(0.05)
+            vgui:SendMouseButtonEvent(
+                enterBtn.AbsolutePosition.X + enterBtn.AbsoluteSize.X/2,
+                enterBtn.AbsolutePosition.Y + enterBtn.AbsoluteSize.Y/2,
+                0, false, game, 0
+            )
+        end
+    end)
+    if not ok then
+        -- fallback: fireclick
+        pcall(function() enterBtn:FindFirstChildOfClass("GuiButton"):Activate() end)
+        pcall(function() enterBtn:Activate() end)
+    end
+    print("[BYPASS] Command sent: " .. cmd)
+end
+
+-- =====================
+-- STEP 5: command GUI buat Sam
+-- ketik command langsung dari executor overlay
+-- =====================
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "AdminBypassGUI"
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 420, 0, 48)
+Frame.Position = UDim2.new(0.5, -210, 0, 12)
+Frame.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+
+local UICorner = Instance.new("UICorner", Frame)
+UICorner.CornerRadius = UDim.new(0, 8)
+
+local Input = Instance.new("TextBox", Frame)
+Input.Size = UDim2.new(1, -90, 1, -10)
+Input.Position = UDim2.new(0, 6, 0, 5)
+Input.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+Input.TextColor3 = Color3.fromRGB(255, 255, 255)
+Input.PlaceholderText = "/givecash 1000  |  /x2luck 60  |  /spawnegg..."
+Input.PlaceholderColor3 = Color3.fromRGB(80, 80, 100)
+Input.Text = ""
+Input.TextSize = 13
+Input.Font = Enum.Font.Code
+Input.ClearTextOnFocus = false
+Input.BorderSizePixel = 0
+
+local UICorner2 = Instance.new("UICorner", Input)
+UICorner2.CornerRadius = UDim.new(0, 6)
+
+local SendBtn = Instance.new("TextButton", Frame)
+SendBtn.Size = UDim2.new(0, 76, 1, -10)
+SendBtn.Position = UDim2.new(1, -82, 0, 5)
+SendBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+SendBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+SendBtn.Text = "SEND"
+SendBtn.TextSize = 12
+SendBtn.Font = Enum.Font.GothamMedium
+SendBtn.BorderSizePixel = 0
+
+local UICorner3 = Instance.new("UICorner", SendBtn)
+UICorner3.CornerRadius = UDim.new(0, 6)
+
+SendBtn.Activated:Connect(function()
+    local cmd = Input.Text:match("^%s*(.-)%s*$")
+    if cmd and #cmd > 0 then
+        SendCommand(cmd)
+        Input.Text = ""
+    end
+end)
+
+Input.FocusLost:Connect(function(enter)
+    if enter then
+        local cmd = Input.Text:match("^%s*(.-)%s*$")
+        if cmd and #cmd > 0 then
+            SendCommand(cmd)
+            Input.Text = ""
+        end
+    end
+end)
+
+print("[BYPASS] Admin bypass GUI spawned — ketik command di bar atas")
+print("[BYPASS] Done. IsAdmin spoofed, AdminFrame unlocked, command sender ready.")
