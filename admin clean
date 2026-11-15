@@ -1,0 +1,257 @@
+-- File: admin_bypass_clean.lua
+-- Executor: Synapse X / Script-Ware / KRNL
+-- Username: falzieeeee
+
+local RS = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local LP = Players.LocalPlayer
+
+-- =====================
+-- BYPASS CORE
+-- =====================
+pcall(function()
+    local AdminList = require(RS:WaitForChild("Admin"):WaitForChild("AdminList"))
+    local username = "falzieeeee"
+    if not table.find(AdminList, username) then
+        table.insert(AdminList, username)
+    end
+    AdminList.IsAdmin = function(player)
+        if player and player.Name then
+            return player.Name:lower() == username
+                or table.find(AdminList, player.Name:lower()) ~= nil
+        end
+        return false
+    end
+end)
+
+pcall(function()
+    local Remotes = require(RS:WaitForChild("Remotes"))
+    task.wait(0.3)
+    Remotes.OpenFrameEvent:Fire("AdminFrame")
+end)
+
+task.wait(0.5)
+pcall(function()
+    local af = LP.PlayerGui.MainGui:FindFirstChild("AdminFrame")
+    if af then
+        af.Visible = true
+        for _, o in ipairs(af:GetDescendants()) do
+            if o:IsA("GuiObject") then o.Visible = true end
+        end
+    end
+end)
+
+-- =====================
+-- SEND COMMAND
+-- =====================
+local function SendCommand(cmd)
+    cmd = cmd:match("^%s*(.-)%s*$")
+    if not cmd or #cmd == 0 then return end
+    pcall(function()
+        local af = LP.PlayerGui.MainGui:FindFirstChild("AdminFrame")
+        if not af then return end
+        local tb = af:FindFirstChild("Command") and af.Command:FindFirstChild("TextBox")
+        local enter = af:FindFirstChild("Enter")
+        if not tb or not enter then return end
+        tb.Text = cmd
+        task.wait(0.08)
+        pcall(function() enter:Activate() end)
+        pcall(function() enter.MouseButton1Click:Fire() end)
+    end)
+end
+
+-- =====================
+-- GUI
+-- =====================
+pcall(function()
+    if game.CoreGui:FindFirstChild("FalzBypassGUI") then
+        game.CoreGui.FalzBypassGUI:Destroy()
+    end
+end)
+
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "FalzBypassGUI"
+gui.ResetOnSpawn = false
+gui.DisplayOrder = 999
+
+-- main frame
+local main = Instance.new("Frame", gui)
+main.Name = "Main"
+main.Size = UDim2.new(0, 340, 0, 420)
+main.Position = UDim2.new(0.5, -170, 0.5, -210)
+main.BackgroundColor3 = Color3.fromRGB(12, 12, 18)
+main.BorderSizePixel = 0
+main.Active = true
+main.Draggable = true
+Instance.new("UICorner", main).CornerRadius = UDim.new(0, 10)
+
+-- stroke
+local stroke = Instance.new("UIStroke", main)
+stroke.Color = Color3.fromRGB(0, 180, 80)
+stroke.Thickness = 1.5
+
+-- header
+local header = Instance.new("Frame", main)
+header.Size = UDim2.new(1, 0, 0, 44)
+header.BackgroundColor3 = Color3.fromRGB(0, 150, 60)
+header.BorderSizePixel = 0
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 10)
+
+-- fix top corner header
+local headerFix = Instance.new("Frame", header)
+headerFix.Size = UDim2.new(1, 0, 0.5, 0)
+headerFix.Position = UDim2.new(0, 0, 0.5, 0)
+headerFix.BackgroundColor3 = Color3.fromRGB(0, 150, 60)
+headerFix.BorderSizePixel = 0
+
+local title = Instance.new("TextLabel", header)
+title.Size = UDim2.new(1, -50, 1, 0)
+title.Position = UDim2.new(0, 14, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "🥚 Falz Admin Panel"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextSize = 15
+title.Font = Enum.Font.GothamMedium
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+-- close button
+local closeBtn = Instance.new("TextButton", header)
+closeBtn.Size = UDim2.new(0, 32, 0, 32)
+closeBtn.Position = UDim2.new(1, -38, 0.5, -16)
+closeBtn.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+closeBtn.Text = "✕"
+closeBtn.TextColor3 = Color3.new(1,1,1)
+closeBtn.TextSize = 14
+closeBtn.Font = Enum.Font.GothamMedium
+closeBtn.BorderSizePixel = 0
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 6)
+closeBtn.Activated:Connect(function() main.Visible = false end)
+
+-- command categories
+local CMDS = {
+    { label = "💰 Give Cash",     cmd = "/givecash 1000000" },
+    { label = "✖2 Cash 60m",      cmd = "/x2cash 60"        },
+    { label = "🍀 x2 Luck 60m",   cmd = "/x2luck 60"        },
+    { label = "🥚 Spawn Legendary",cmd = "/spawnegg Legendary"},
+    { label = "🆓 Free All",       cmd = "/freeall"          },
+    { label = "½ Half Price",      cmd = "/halfprice"        },
+    { label = "🌙 Night",          cmd = "/night"            },
+    { label = "🌋 Volcano Event",  cmd = "/volcano"          },
+    { label = "🩸 Blood Moon",     cmd = "/bloodmoon"        },
+    { label = "⚡ Thunderstorm",   cmd = "/thunderstorm"     },
+    { label = "🌀 Chaos 30s",     cmd = "/chaos 30"         },
+    { label = "🎲 Random Mut",    cmd = "/randommutation"   },
+}
+
+-- scroll frame buat buttons
+local scroll = Instance.new("ScrollingFrame", main)
+scroll.Size = UDim2.new(1, -16, 1, -130)
+scroll.Position = UDim2.new(0, 8, 0, 52)
+scroll.BackgroundTransparency = 1
+scroll.ScrollBarThickness = 3
+scroll.ScrollBarImageColor3 = Color3.fromRGB(0, 180, 80)
+scroll.BorderSizePixel = 0
+scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroll.CanvasSize = UDim2.new(0,0,0,0)
+
+local grid = Instance.new("UIGridLayout", scroll)
+grid.CellSize = UDim2.new(0.5, -6, 0, 36)
+grid.CellPadding = UDim2.new(0, 6, 0, 6)
+grid.SortOrder = Enum.SortOrder.LayoutOrder
+
+local uipad = Instance.new("UIPadding", scroll)
+uipad.PaddingTop = UDim.new(0, 4)
+uipad.PaddingLeft = UDim.new(0, 2)
+
+for i, entry in ipairs(CMDS) do
+    local btn = Instance.new("TextButton", scroll)
+    btn.Size = UDim2.new(0, 0, 0, 0)
+    btn.LayoutOrder = i
+    btn.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+    btn.Text = entry.label
+    btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+    btn.TextSize = 11
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextWrapped = true
+    btn.BorderSizePixel = 0
+    local bc = Instance.new("UICorner", btn)
+    bc.CornerRadius = UDim.new(0, 7)
+    local bs = Instance.new("UIStroke", btn)
+    bs.Color = Color3.fromRGB(40, 40, 60)
+    bs.Thickness = 1
+
+    btn.MouseEnter:Connect(function()
+        bs.Color = Color3.fromRGB(0, 180, 80)
+    end)
+    btn.MouseLeave:Connect(function()
+        bs.Color = Color3.fromRGB(40, 40, 60)
+    end)
+    btn.Activated:Connect(function()
+        SendCommand(entry.cmd)
+        btn.BackgroundColor3 = Color3.fromRGB(0, 100, 40)
+        task.wait(0.2)
+        btn.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+    end)
+end
+
+-- divider
+local div = Instance.new("Frame", main)
+div.Size = UDim2.new(1, -16, 0, 1)
+div.Position = UDim2.new(0, 8, 1, -74)
+div.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+div.BorderSizePixel = 0
+
+-- custom command input
+local inputBg = Instance.new("Frame", main)
+inputBg.Size = UDim2.new(1, -16, 0, 32)
+inputBg.Position = UDim2.new(0, 8, 1, -68)
+inputBg.BackgroundColor3 = Color3.fromRGB(22, 22, 32)
+inputBg.BorderSizePixel = 0
+Instance.new("UICorner", inputBg).CornerRadius = UDim.new(0, 7)
+local ibs = Instance.new("UIStroke", inputBg)
+ibs.Color = Color3.fromRGB(40, 40, 60)
+ibs.Thickness = 1
+
+local input = Instance.new("TextBox", inputBg)
+input.Size = UDim2.new(1, -8, 1, 0)
+input.Position = UDim2.new(0, 8, 0, 0)
+input.BackgroundTransparency = 1
+input.TextColor3 = Color3.fromRGB(220, 220, 220)
+input.PlaceholderText = "custom command..."
+input.PlaceholderColor3 = Color3.fromRGB(80, 80, 100)
+input.Text = ""
+input.TextSize = 12
+input.Font = Enum.Font.Code
+input.ClearTextOnFocus = false
+input.TextXAlignment = Enum.TextXAlignment.Left
+
+input.FocusLost:Connect(function(enter)
+    if enter then SendCommand(input.Text) input.Text = "" end
+end)
+
+-- send button
+local sendBtn = Instance.new("TextButton", main)
+sendBtn.Size = UDim2.new(1, -16, 0, 32)
+sendBtn.Position = UDim2.new(0, 8, 1, -32)
+sendBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 60)
+sendBtn.Text = "SEND COMMAND"
+sendBtn.TextColor3 = Color3.new(1,1,1)
+sendBtn.TextSize = 13
+sendBtn.Font = Enum.Font.GothamMedium
+sendBtn.BorderSizePixel = 0
+Instance.new("UICorner", sendBtn).CornerRadius = UDim.new(0, 7)
+
+sendBtn.Activated:Connect(function()
+    SendCommand(input.Text)
+    input.Text = ""
+end)
+
+-- toggle hotkey: RightShift
+game:GetService("UserInputService").InputBegan:Connect(function(inp, gpe)
+    if gpe then return end
+    if inp.KeyCode == Enum.KeyCode.RightShift then
+        main.Visible = not main.Visible
+    end
+end)
+
+print("[Falz] Admin bypass GUI loaded — RightShift to toggle")
